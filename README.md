@@ -1,5 +1,5 @@
 #               Go app local (developer) deployement
----
+
 ## Summary
 
 A lightweight Go web application that displays the live status of LXD instances (VMs and containers) in your homelab. It authenticates with OpenBao/Vault via AppRole to securely retrieve LXD TLS credentials at runtime, then queries the LXD API and renders results in a clean HTML dashboard. Deployed on MicroK8s via Helm.

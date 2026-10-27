@@ -1,7 +1,114 @@
-# go-lxd-vm-dashboard
+#               Go app local (developer) deployement
+---
+## Summary
 
 A lightweight Go web application that displays the live status of LXD instances (VMs and containers) in your homelab. It authenticates with OpenBao/Vault via AppRole to securely retrieve LXD TLS credentials at runtime, then queries the LXD API and renders results in a clean HTML dashboard. Deployed on MicroK8s via Helm.
 
+---
+## Infrastructure Archtecture - GHA - kubernetes - openbao (vault)
+
+```
+Developer / GitHub Actions Runner
+----main commands----
+docker build
+docker push
+helm install/upgrade
+---------------------
+
+Gitea / Developer
++-----------------------------------+
+| Source Code + Helm Chart Folder   |
+| Chart.yaml, values.yaml, templates|
++-----------------------------------+
+        │
+        |
++------------------+
+|Runner / Developer├──────────────────────────────────────────────────────► docker build
++------------------+                                                      │
+        │                                                                 ▼
+        │                                                        +------------------+
+        │                                                        | Docker Image     |
+        │                                                        | (tagged version) |
+        │                                                        +------------------+
+        │                                                                 │
+        │                                                                 ▼
+        │                                                             docker push
+        │                                                                 │
+        │                                                                 ▼
+        │                                                       +------------------+
+        │                                                       | MicroK8s Registry|
+        │                                                       | Stores container |
+        │                                                       | images           |
+        │                                                       +------------------+
+        │
+        └───────────────► helm install/upgrade
+                              │
+                              ▼
+                      +----------------------+
+                      | Helm Metadata        |
+                      | - Release name       |
+                      | - Values used        |
+                      | - Chart version      |
+                      | - History snapshot   |
+                      +----------------------+
+                              │
+                              ▼
+                      +----------------------+
+                      | Kubernetes Objects   |
+                      | - Deployment         |
+                      | - Service            |
+                      | - Ingress            |
+                      | - ConfigMaps/Secrets |
+                      +----------------------+
+                              │
+                              ▼
+                      +----------------------+
+                      | Pods (runtime)       |
+                      | - Pull images from   |
+                      |   MicroK8s registry  |
+                      | - Ephemeral, auto-   |
+                      |   recreated by K8s   |
+                      +----------------------+
+
+```
+## Secrets Architecture - Go app - kubernetes - openbao (vault)
+
+```
+K8s Secret (openbao-creds)         ← created manually via kubectl  
+├── VAULT\_ADDR                         in each namespace (dev/staging/live)  
+├── VAULT\_ROLE\_ID  
+└── VAULT\_SECRET\_ID  
+         │  
+         │
+      Helm Charts  injected via envFrom in values.yaml ---injected---> deployment.yaml  
+         │  
+         ▼  
+      Go App (main.go)  
+      getSecrets() function  
+         │  
+         │  AppRole login on every HTTP request  
+         ▼  
+      OpenBao  
+         │  
+         └── homelab/data/lxd  
+                  │  
+                  ├── client\_cert    → LXD TLS auth  
+                  └── client\_key     → LXD TLS auth  
+                           │  
+                           ▼  
+                        LXD API  
+                  https://10.0.0.162:8443  
+                           │  
+                           ▼  
+                    Instance list  
+                    (name, type, status, IPs)  
+                           │  
+                           ▼  
+                      index.html  
+                      rendered to browser
+
+```
+Vault credentials (`VAULT_ADDR`, `VAULT_ROLE_ID`, `VAULT_SECRET_ID`) are injected via a Kubernetes Secret. The LXD address is set through `values.yaml`.
 ---
 
 ## Features
@@ -10,49 +117,6 @@ A lightweight Go web application that displays the live status of LXD instances 
 - **Vault/OpenBao AppRole auth** — no credentials baked into the image; secrets are fetched at request time
 - **Kubernetes-native deployment** — Helm chart with configurable values, ingress, and secret reference
 - **Single-binary Docker image** — multi-stage build, Alpine final layer
-
----
-
-## Architecture - (Infrastrucutre - Go app internal workflow - Go app internal Secrets workflow)
-
-```
-                              ┌────────────────────┐
-                              │     index.html     │
-                              └────────────────────┘
-                                      │   ▲
-                                      │   │  
-                                      ▼   │ 
-                              ┌────────────────────┐
-                              │      Browser       │
-                              └─────────┬──────────┘
-                                        │
-                                        ▼
-                              ┌────────────────────┐
-                              │  Ingress (NGINX)   │
-                              └─────────┬──────────┘
-                                        │
-                                        ▼
-                              ┌────────────────────┐
-                              │      Service       │
-                              └─────────┬──────────┘
-                                        │
-                                        ▼
-                              ┌────────────────────┐
-                              │   Pod (MicroK8s)   │  (OpenBao secrets for OpenBao)
-                              └─────────┬──────────┘
-                                        │
-                  ┌─────────────────────┴─────────────────────┐
-                  │                                           │
-                  ▼                                           ▼
-      ┌──────────────────────────────┐         ┌──────────────────────────────┐
-      │ Fetch TLS cert/key           │         │ Query LXD API                │
-      │ from OpenBao (AppRole)       │         │ (LXD Server)                 │
-      └──────────────────────────────┘         └──────────────────────────────┘
-
-```
-
-Vault credentials (`VAULT_ADDR`, `VAULT_ROLE_ID`, `VAULT_SECRET_ID`) are injected via a Kubernetes Secret. The LXD address is set through `values.yaml`.
-
 ---
 
 ## Prerequisites

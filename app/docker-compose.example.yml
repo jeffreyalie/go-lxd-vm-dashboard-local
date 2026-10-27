@@ -1,0 +1,38 @@
+# docker-compose.example.yml - Example configuration for go-lxd-vm-dashboard
+# Copy this file to docker-compose.yml and fill in your values
+#
+# Usage:
+#   1. cp docker-compose.example.yml docker-compose.yml
+#   2. Edit with your values
+#   3. Run: microk8s kubectl apply -f docker-compose.yml
+
+version: '3.8'
+
+services:
+  go-lxd-vm-dashboard:
+    build:
+      context: .
+      dockerfile: dockerfile
+    image: localhost:32000/go-lxd-vm-dashboard:latest
+    ports:
+      - "8080:8080"
+    environment:
+      # Replace with your actual Vault credentials and LXD address
+      # Get these from your OpenBao/Vault setup
+      - VAULT_ADDR=https://<your-vault-host>:8200
+      - VAULT_ROLE_ID=<your-approle-role-id>
+      - VAULT_SECRET_ID=<your-secret-id-from-auth>
+      # For production, set to false and configure proper CA verification
+      - VAULT_SKIP_VERIFY=false
+      # LXD API endpoint (must be accessible from container)
+      - LXD_API_ADDRESS=https://<your-lxd-host>:8443
+    volumes:
+      # Uncomment if you need to access K8s secrets in a hybrid setup
+      # - /var/run/secrets/kubernetes.io/serviceaccount:/var/run/secrets/kubernetes.io/serviceaccount:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"] || "exit 0"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

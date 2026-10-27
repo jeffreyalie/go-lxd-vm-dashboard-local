@@ -1,0 +1,40 @@
+# docker-compose.yml for go-lxd-vm-dashboard
+# Use this file for easy local development and deployment
+#
+# Quick Start:
+#   1. cd /path/to/go-lxd-vm-dashboard
+#   2. microk8s kubectl create secret generic openbao-creds \
+#     --from-literal=VAULT_ADDR=https://<vault-addr>:8200 \
+#     --from-literal=VAULT_ROLE_ID=<role-id> \
+#     --from-literal=VAULT_SECRET_ID=<secret-id> \
+#     --namespace dev
+#   3. cp docker-compose.example.yml docker-compose.yml
+#   4. Edit docker-compose.yml with your values
+#   5. microk8s kubectl apply -f docker-compose.yml
+
+version: '3.8'
+
+services:
+  go-lxd-vm-dashboard:
+    build:
+      context: .
+      dockerfile: dockerfile
+    image: localhost:32000/go-lxd-vm-dashboard:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - VAULT_ADDR=${VAULT_ADDR:-https://vault.local:8200}
+      - VAULT_ROLE_ID=${VAULT_ROLE_ID:-your-role-id-here}
+      - VAULT_SECRET_ID=${VAULT_SECRET_ID:-your-secret-id-here}
+      - VAULT_SKIP_VERIFY=true  # Disable in production with proper CA certs
+    volumes:
+      # Mount secrets from K8s secret (for hybrid dev/prod setups)
+      # Uncomment and update the path below if you have a pre-created secret
+      # - /var/run/secrets/kubernetes.io/serviceaccount:/var/run/secrets/kubernetes.io/serviceaccount:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"] || "exit 0"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

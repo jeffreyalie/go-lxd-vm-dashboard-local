@@ -1,10 +1,34 @@
-#               Go app local (developer) deployement
+# Infrastructure Archtecture
+
+## Infrastructure Archtecture Go app deployment - Gitea - Developer - kubernetes - openbao (vault)
 
 ## Summary
 
 A lightweight Go web application that displays the live status of LXD instances (VMs and containers) in your homelab. It authenticates with OpenBao/Vault via AppRole to securely retrieve LXD TLS credentials at runtime, then queries the LXD API and renders results in a clean HTML dashboard. Deployed on MicroK8s via Helm.
 
 ---
+## Folder Structure
+
+```
+.
+├── app/
+│   ├── main.go          # HTTP server, LXD + Vault client logic
+│   ├── index.html       # Go HTML template for the dashboard
+│   ├── dockerfile       # Multi-stage Docker build
+│   ├── go.mod
+│   └── go.sum
+├── helm-chart/
+│   ├── Chart.yaml
+│   ├── values.yaml
+│   └── templates/
+│       ├── deployment.yaml
+│       ├── service.yaml
+│       └── ingress.yaml.txt
+├── .gitignore
+└── README.md
+```
+---
+
 ## Infrastructure Archtecture - GHA - kubernetes - openbao (vault)
 
 ```
@@ -196,30 +220,6 @@ path "homelab/data/lxd" {
   capabilities = ["read"]
 }
 ```
-
----
-
-## Project Structure
-
-```
-.
-├── app/
-│   ├── main.go          # HTTP server, LXD + Vault client logic
-│   ├── index.html       # Go HTML template for the dashboard
-│   ├── dockerfile       # Multi-stage Docker build
-│   ├── go.mod
-│   └── go.sum
-├── helm-chart/
-│   ├── Chart.yaml
-│   ├── values.yaml
-│   └── templates/
-│       ├── deployment.yaml
-│       ├── service.yaml
-│       └── ingress.yaml.txt
-├── .gitignore
-└── README.md
-```
-
 ---
 
 ## Helm Values Reference

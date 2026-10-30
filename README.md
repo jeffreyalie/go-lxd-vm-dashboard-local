@@ -1,6 +1,8 @@
 # Infrastructure Archtecture
+* Infrastructure Archtecture Go app deployment - Gitea - Developer - kubernetes - openbao (vault)
 
-## Infrastructure Archtecture Go app deployment - Gitea - Developer - kubernetes - openbao (vault)
+# Infrastructure Secrets Archtecture
+* Infrastructure Secrets Archtecture Go app deployment - Microk8s - openbao (vault)
 
 ## Go app to monitor lxd VMs via webui
 
